@@ -79,12 +79,12 @@ static const uint8_t SCL = GROVE_SCL;
 // RF front-ends (CC1101 + NRF24L01+)
 // -----------------------------------------------------------------------------
 #define USE_CC1101_VIA_SPI
-#define CC1101_SS_PIN 36
+#define CC1101_SS_PIN 10
 #define CC1101_MOSI_PIN SPI_MOSI_PIN
 #define CC1101_MISO_PIN SPI_MISO_PIN
 #define CC1101_SCK_PIN SPI_SCK_PIN
-#define CC1101_GDO0_PIN 33
-#define CC1101_GDO2_PIN 34
+#define CC1101_GDO0_PIN 19
+#define CC1101_GDO2_PIN -1
 
 #define USE_NRF24_VIA_SPI
 #define NRF24_SS_PIN 6
