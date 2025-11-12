@@ -26,6 +26,8 @@
 #include "../ESP-General/pins_arduino.h"
 #elif SMOOCHIEE_BOARD
 #include "../smoochiee-board/pins_arduino.h"
+#elif GHOST_TOOLBOX
+#include "../GHOST-TOOLBOX/pins_arduino.h"
 #elif XK404
 #include "../xk404/pins_arduino.h"
 #elif T_WATCH_S3
