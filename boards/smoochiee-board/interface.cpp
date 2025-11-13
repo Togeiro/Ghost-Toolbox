@@ -15,11 +15,14 @@ XPowersPPM PPM;
 
 void _setup_gpio() {
 
-    pinMode(UP_BTN, INPUT); // Sets the power btn as an INPUT
-    pinMode(SEL_BTN, INPUT);
-    pinMode(DW_BTN, INPUT);
-    pinMode(R_BTN, INPUT);
-    pinMode(L_BTN, INPUT);
+    if (UP_BTN >= 0) pinMode(UP_BTN, INPUT_PULLUP);
+    if (SEL_BTN >= 0) pinMode(SEL_BTN, INPUT_PULLUP);
+    if (DW_BTN >= 0) pinMode(DW_BTN, INPUT_PULLUP);
+    if (R_BTN >= 0) pinMode(R_BTN, INPUT_PULLUP);
+    if (L_BTN >= 0) pinMode(L_BTN, INPUT_PULLUP);
+#if defined(ESC_BTN) && ESC_BTN >= 0
+    pinMode(ESC_BTN, INPUT_PULLUP);
+#endif
 
     pinMode(CC1101_SS_PIN, OUTPUT);
     pinMode(NRF24_SS_PIN, OUTPUT);
@@ -97,13 +100,20 @@ void _setBrightness(uint8_t brightval) {
 void InputHandler(void) {
     static unsigned long tm = 0;
     if (millis() - tm < 200 && !LongPress) return;
-    bool _u = digitalRead(UP_BTN);
-    bool _d = digitalRead(DW_BTN);
-    bool _l = digitalRead(L_BTN);
-    bool _r = digitalRead(R_BTN);
-    bool _s = digitalRead(SEL_BTN);
+    bool _u = (UP_BTN >= 0) ? digitalRead(UP_BTN) : true;
+    bool _d = (DW_BTN >= 0) ? digitalRead(DW_BTN) : true;
+    bool _l = (L_BTN >= 0) ? digitalRead(L_BTN) : true;
+    bool _r = (R_BTN >= 0) ? digitalRead(R_BTN) : true;
+    bool _s = (SEL_BTN >= 0) ? digitalRead(SEL_BTN) : true;
+#if defined(ESC_BTN) && ESC_BTN >= 0
+    bool _esc = digitalRead(ESC_BTN);
+#endif
 
-    if (!_s || !_u || !_d || !_r || !_l) {
+    if (!_s || !_u || !_d || !_r || !_l
+#if defined(ESC_BTN) && ESC_BTN >= 0
+        || !_esc
+#endif
+    ) {
         tm = millis();
         if (!wakeUpScreen()) AnyKeyPress = true;
         else return;
@@ -119,6 +129,13 @@ void InputHandler(void) {
         NextPagePress = true;
     }
     if (!_s) { SelPress = true; }
+#if defined(ESC_BTN) && ESC_BTN >= 0
+    if (!_esc) {
+        EscPress = true;
+        NextPress = false;
+        PrevPress = false;
+    } else
+#endif
     if (!_l && !_r) {
         EscPress = true;
         NextPress = false;

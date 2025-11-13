@@ -15,57 +15,28 @@ from shutil import copyfile
 Import("env")  # type: ignore
 
 FRAMEWORK_DIR = env.PioPlatform().get_package_dir("framework-arduinoespressif32")
+PIOARDUINO_BUILD = join(FRAMEWORK_DIR, "tools", "pioarduino-build.py")
 
-
-def _subst_path(name: str) -> str:
-    value = env.subst(name)
-    if not value or "$" in value:
-        return ""
-    return value
-
-
-def _ensure_pioarduino_build() -> None:
-    project_dir = env.get("PROJECT_DIR")
-    if not project_dir:
-        raise RuntimeError("PROJECT_DIR is undefined in PlatformIO environment")
-
-    source_script = join(project_dir, "tools", "pioarduino-build.py")
-    if not exists(source_script):
+# The customized Arduino core we download for this project does not ship with
+# the PlatformIO helper script that upstream releases include.  PlatformIO
+# expects tools/pioarduino-build.py to exist and aborts the build before our
+# sources even compile if it is missing.  To keep the environment self-contained
+# we download the script directly from the matching upstream tag the first time
+# the patch script runs.  Once saved, PlatformIO sees the file and proceeds as
+# normal on subsequent builds.
+if not exists(PIOARDUINO_BUILD):
+    print("Missing pioarduino-build.py, downloading fallback copy from Espressif...")
+    PIOARDUINO_URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/2.0.17/tools/pioarduino-build.py"
+    try:
+        response = requests.get(PIOARDUINO_URL, timeout=60)
+        response.raise_for_status()
+    except Exception as exc:  # pragma: no cover - network/IO failure surfaces to user
         raise RuntimeError(
-            "tools/pioarduino-build.py is missing from the repository; "
-            "please update your checkout."
-        )
-
-    tool_dirs = set()
-    if FRAMEWORK_DIR:
-        tool_dirs.add(join(FRAMEWORK_DIR, "tools"))
-
-    project_core_dir = _subst_path("$PROJECT_CORE_DIR")
-    if project_core_dir:
-        tool_dirs.add(join(project_core_dir, "packages", "framework-arduinoespressif32", "tools"))
-
-    project_packages_dir = _subst_path("$PROJECT_PACKAGES_DIR")
-    if project_packages_dir:
-        tool_dirs.add(join(project_packages_dir, "framework-arduinoespressif32", "tools"))
-
-    placed = False
-    for tool_dir in tool_dirs:
-        target = join(tool_dir, "pioarduino-build.py")
-        if exists(target):
-            placed = True
-            continue
-
-        makedirs(tool_dir, exist_ok=True)
-        copyfile(source_script, target)
-        placed = True
-
-    if not placed:
-        raise RuntimeError(
-            "Unable to place pioarduino-build.py in any known framework directory."
-        )
-
-
-_ensure_pioarduino_build()
+            f"Failed to fetch pioarduino-build.py from {PIOARDUINO_URL}: {exc}"
+        ) from exc
+    makedirs(dirname(PIOARDUINO_BUILD), exist_ok=True)
+    with open(PIOARDUINO_BUILD, "wb") as fp:
+        fp.write(response.content)
 
 board_mcu = env.BoardConfig()
 mcu = board_mcu.get("build.mcu", "")
