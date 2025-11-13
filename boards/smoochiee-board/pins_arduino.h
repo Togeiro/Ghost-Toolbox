@@ -29,6 +29,9 @@ static const uint8_t SCK = 18;
 #define DW_BTN 40
 #define R_BTN 38
 #define L_BTN 39
+#ifndef ESC_BTN
+#define ESC_BTN -1
+#endif
 #define BTN_ACT LOW
 
 #define RXLED 4
