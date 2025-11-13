@@ -10,10 +10,62 @@ import glob
 import gzip
 from os import makedirs, remove, rename
 from os.path import basename, dirname, exists, isfile, join
+from textwrap import dedent
 
 Import("env")  # type: ignore
 
 FRAMEWORK_DIR = env.PioPlatform().get_package_dir("framework-arduinoespressif32")
+
+
+_PIOARDUINO_STUB = dedent(
+    """\
+Import(\"env\")  # type: ignore
+
+\"\"\"Minimal stub of Arduino's pioarduino-build helper.
+
+The custom framework package distributed with Ghost Toolbox omits the
+pioarduino-build.py script that PlatformIO expects to import.  The stock
+Espressif version configures include paths for the selected board variant
+and then returns control to the main builder.  We only need enough logic
+here to keep PlatformIO from aborting, so the stub ensures the variant
+include directory is present and otherwise stays out of the way.
+\"\"\"
+
+from os.path import exists, join
+
+platform = env.PioPlatform()
+board = env.BoardConfig()
+framework_dir = platform.get_package_dir(\"framework-arduinoespressif32\")
+variant_name = board.get(\"build.variant\")
+
+if framework_dir and variant_name:
+    variant_dir = join(framework_dir, \"variants\", variant_name)
+    if exists(variant_dir):
+        env.AppendUnique(CPPPATH=[variant_dir])
+"""
+)
+
+
+def _ensure_pioarduino_build() -> None:
+    if not FRAMEWORK_DIR:
+        raise RuntimeError("Unable to locate framework-arduinoespressif32 package directory")
+
+    tool_dir = join(FRAMEWORK_DIR, "tools")
+    target = join(tool_dir, "pioarduino-build.py")
+
+    if not exists(target):
+        makedirs(tool_dir, exist_ok=True)
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(_PIOARDUINO_STUB)
+
+    if not exists(target):
+        raise RuntimeError(
+            f"Failed to materialize pioarduino-build.py at {target}; check filesystem permissions."
+        )
+
+
+_ensure_pioarduino_build()
+
 board_mcu = env.BoardConfig()
 mcu = board_mcu.get("build.mcu", "")
 patchflag_path = join(FRAMEWORK_DIR, "tools", "sdk", mcu, "lib", ".patched")
