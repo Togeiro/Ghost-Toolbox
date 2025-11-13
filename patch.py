@@ -14,6 +14,29 @@ from os.path import basename, dirname, exists, isfile, join
 Import("env")  # type: ignore
 
 FRAMEWORK_DIR = env.PioPlatform().get_package_dir("framework-arduinoespressif32")
+PIOARDUINO_BUILD = join(FRAMEWORK_DIR, "tools", "pioarduino-build.py")
+
+# The customized Arduino core we download for this project does not ship with
+# the PlatformIO helper script that upstream releases include.  PlatformIO
+# expects tools/pioarduino-build.py to exist and aborts the build before our
+# sources even compile if it is missing.  To keep the environment self-contained
+# we download the script directly from the matching upstream tag the first time
+# the patch script runs.  Once saved, PlatformIO sees the file and proceeds as
+# normal on subsequent builds.
+if not exists(PIOARDUINO_BUILD):
+    print("Missing pioarduino-build.py, downloading fallback copy from Espressif...")
+    PIOARDUINO_URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/2.0.17/tools/pioarduino-build.py"
+    try:
+        response = requests.get(PIOARDUINO_URL, timeout=60)
+        response.raise_for_status()
+    except Exception as exc:  # pragma: no cover - network/IO failure surfaces to user
+        raise RuntimeError(
+            f"Failed to fetch pioarduino-build.py from {PIOARDUINO_URL}: {exc}"
+        ) from exc
+    makedirs(dirname(PIOARDUINO_BUILD), exist_ok=True)
+    with open(PIOARDUINO_BUILD, "wb") as fp:
+        fp.write(response.content)
+
 board_mcu = env.BoardConfig()
 mcu = board_mcu.get("build.mcu", "")
 patchflag_path = join(FRAMEWORK_DIR, "tools", "sdk", mcu, "lib", ".patched")
