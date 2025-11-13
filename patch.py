@@ -10,61 +10,33 @@ import glob
 import gzip
 from os import makedirs, remove, rename
 from os.path import basename, dirname, exists, isfile, join
-from textwrap import dedent
+from shutil import copyfile
 
 Import("env")  # type: ignore
 
 FRAMEWORK_DIR = env.PioPlatform().get_package_dir("framework-arduinoespressif32")
+PIOARDUINO_BUILD = join(FRAMEWORK_DIR, "tools", "pioarduino-build.py")
 
-
-_PIOARDUINO_STUB = dedent(
-    """\
-Import(\"env\")  # type: ignore
-
-\"\"\"Minimal stub of Arduino's pioarduino-build helper.
-
-The custom framework package distributed with Ghost Toolbox omits the
-pioarduino-build.py script that PlatformIO expects to import.  The stock
-Espressif version configures include paths for the selected board variant
-and then returns control to the main builder.  We only need enough logic
-here to keep PlatformIO from aborting, so the stub ensures the variant
-include directory is present and otherwise stays out of the way.
-\"\"\"
-
-from os.path import exists, join
-
-platform = env.PioPlatform()
-board = env.BoardConfig()
-framework_dir = platform.get_package_dir(\"framework-arduinoespressif32\")
-variant_name = board.get(\"build.variant\")
-
-if framework_dir and variant_name:
-    variant_dir = join(framework_dir, \"variants\", variant_name)
-    if exists(variant_dir):
-        env.AppendUnique(CPPPATH=[variant_dir])
-"""
-)
-
-
-def _ensure_pioarduino_build() -> None:
-    if not FRAMEWORK_DIR:
-        raise RuntimeError("Unable to locate framework-arduinoespressif32 package directory")
-
-    tool_dir = join(FRAMEWORK_DIR, "tools")
-    target = join(tool_dir, "pioarduino-build.py")
-
-    if not exists(target):
-        makedirs(tool_dir, exist_ok=True)
-        with open(target, "w", encoding="utf-8") as handle:
-            handle.write(_PIOARDUINO_STUB)
-
-    if not exists(target):
+# The customized Arduino core we download for this project does not ship with
+# the PlatformIO helper script that upstream releases include.  PlatformIO
+# expects tools/pioarduino-build.py to exist and aborts the build before our
+# sources even compile if it is missing.  To keep the environment self-contained
+# we download the script directly from the matching upstream tag the first time
+# the patch script runs.  Once saved, PlatformIO sees the file and proceeds as
+# normal on subsequent builds.
+if not exists(PIOARDUINO_BUILD):
+    print("Missing pioarduino-build.py, downloading fallback copy from Espressif...")
+    PIOARDUINO_URL = "https://raw.githubusercontent.com/espressif/arduino-esp32/2.0.17/tools/pioarduino-build.py"
+    try:
+        response = requests.get(PIOARDUINO_URL, timeout=60)
+        response.raise_for_status()
+    except Exception as exc:  # pragma: no cover - network/IO failure surfaces to user
         raise RuntimeError(
-            f"Failed to materialize pioarduino-build.py at {target}; check filesystem permissions."
-        )
-
-
-_ensure_pioarduino_build()
+            f"Failed to fetch pioarduino-build.py from {PIOARDUINO_URL}: {exc}"
+        ) from exc
+    makedirs(dirname(PIOARDUINO_BUILD), exist_ok=True)
+    with open(PIOARDUINO_BUILD, "wb") as fp:
+        fp.write(response.content)
 
 board_mcu = env.BoardConfig()
 mcu = board_mcu.get("build.mcu", "")

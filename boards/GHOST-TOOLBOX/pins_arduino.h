@@ -7,10 +7,10 @@
 // -----------------------------------------------------------------------------
 // Core SPI bus (shared by TFT, touch controller, SD card and external radios)
 // -----------------------------------------------------------------------------
-#define SPI_SS_PIN 7
-#define SPI_MOSI_PIN 35
-#define SPI_MISO_PIN 37
-#define SPI_SCK_PIN 36
+#define SPI_SS_PIN 14
+#define SPI_MOSI_PIN 11
+#define SPI_MISO_PIN 13
+#define SPI_SCK_PIN 12
 static const uint8_t SS = SPI_SS_PIN;
 static const uint8_t MOSI = SPI_MOSI_PIN;
 static const uint8_t MISO = SPI_MISO_PIN;
@@ -35,7 +35,7 @@ static const uint8_t SCL = GROVE_SCL;
 #define TFT_RGB_ORDER TFT_RGB
 #define TFT_BACKLIGHT_ON 1
 #define SMOOTH_FONT 1
-#define TFT_CS SPI_SS_PIN
+#define TFT_CS 14
 #define TFT_DC 15
 #define TFT_RST 16
 #define TFT_BL 17
@@ -56,7 +56,7 @@ static const uint8_t SCL = GROVE_SCL;
 // -----------------------------------------------------------------------------
 // SD card slot soldered to the TFT module
 // -----------------------------------------------------------------------------
-#define SDCARD_CS 34
+#define SDCARD_CS 18
 #define SDCARD_MOSI SPI_MOSI_PIN
 #define SDCARD_MISO SPI_MISO_PIN
 #define SDCARD_SCK SPI_SCK_PIN
@@ -83,7 +83,7 @@ static const uint8_t SCL = GROVE_SCL;
 #define CC1101_MOSI_PIN SPI_MOSI_PIN
 #define CC1101_MISO_PIN SPI_MISO_PIN
 #define CC1101_SCK_PIN SPI_SCK_PIN
-#define CC1101_GDO0_PIN 33
+#define CC1101_GDO0_PIN 19
 #define CC1101_GDO2_PIN -1
 
 #define USE_NRF24_VIA_SPI
@@ -96,9 +96,9 @@ static const uint8_t SCL = GROVE_SCL;
 // -----------------------------------------------------------------------------
 // Infrared defaults (available on the front panel header)
 // -----------------------------------------------------------------------------
-#define RXLED 18
-#define IR_TX_PIN 47
-#define LED -1
+#define RXLED 47
+#define IR_TX_PIN 20
+#define LED RXLED
 #define LED_ON HIGH
 #define LED_OFF LOW
 
