@@ -10,6 +10,7 @@ import glob
 import gzip
 from os import makedirs, remove, rename
 from os.path import basename, dirname, exists, isfile, join
+from shutil import copyfile
 
 Import("env")  # type: ignore
 
